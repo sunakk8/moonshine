@@ -11,13 +11,13 @@
 </head>
 <body>
     <h1>Live Captions</h1>
-    <div id="captions">Waiting for transcriptions...</div>
+    <div id="captions"></div>
     <script>
         const captionsDiv = document.getElementById('captions');
         const eventSource = new EventSource('/stream');
 
         eventSource.onmessage = function(event) {
-            captionsDiv.innerText = event.data;
+            captionsDiv.innerText += event.data;
         };
     </script>
 </body>
