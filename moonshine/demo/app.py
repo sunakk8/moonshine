@@ -1,15 +1,15 @@
-"""Live captions from microphone using Moonshine and SileroVAD ONNX models."""
-
 import argparse
 import os
 import sys
 import time
-from queue import Queue
-
 import numpy as np
+from queue import Queue
 from silero_vad import VADIterator, load_silero_vad
 from sounddevice import InputStream
 from tokenizers import Tokenizer
+from flask import Flask, render_template, Response
+import threading
+import subprocess
 
 # Local import of Moonshine ONNX model.
 MOONSHINE_DEMO_DIR = os.path.dirname(__file__)
@@ -18,15 +18,15 @@ sys.path.append(os.path.join(MOONSHINE_DEMO_DIR, ".."))
 from onnx_model import MoonshineOnnxModel
 
 SAMPLING_RATE = 16000
-
 CHUNK_SIZE = 512  # Silero VAD requirement with sampling rate 16000.
 LOOKBACK_CHUNKS = 5
 MAX_LINE_LENGTH = 80
-
-# These affect live caption updating - adjust for your platform speed and model.
 MAX_SPEECH_SECS = 15
 MIN_REFRESH_SECS = 0.2
 
+# Flask app
+app = Flask(__name__)
+transcription_queue = Queue()
 
 class Transcriber(object):
     def __init__(self, model_name, rate=16000):
@@ -73,6 +73,7 @@ def end_recording(speech, do_print=True):
     text = transcribe(speech)
     if do_print:
         print_captions(text)
+    transcription_queue.put(text)  # Add the new caption to the queue immediately.
     caption_cache.append(text)
     speech *= 0.0
 
@@ -96,6 +97,27 @@ def soft_reset(vad_iterator):
     vad_iterator.triggered = False
     vad_iterator.temp_end = 0
     vad_iterator.current_sample = 0
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+def generate():
+    while True:
+        if not transcription_queue.empty():
+            transcription = transcription_queue.get()
+            yield f"data: {transcription}\n\n"
+
+
+@app.route('/stream')
+def stream():
+    return Response(generate(), mimetype='text/event-stream')
+
+
+def run_flask():
+    app.run(debug=True, use_reloader=False)
 
 
 if __name__ == "__main__":
@@ -140,6 +162,9 @@ if __name__ == "__main__":
 
     print("Press Ctrl+C to quit live captions.\n")
 
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
+
     with stream:
         print_captions("Ready...")
         try:
@@ -163,8 +188,6 @@ if __name__ == "__main__":
                         end_recording(speech)
 
                 elif recording:
-                    # Possible speech truncation can cause hallucination.
-
                     if (len(speech) / SAMPLING_RATE) > MAX_SPEECH_SECS:
                         recording = False
                         end_recording(speech)
@@ -194,4 +217,3 @@ if __name__ == "__main__":
 """)
             if caption_cache:
                 print(f"Cached captions.\n{' '.join(caption_cache)}")
-
