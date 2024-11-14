@@ -18,6 +18,7 @@
 
         eventSource.onmessage = function(event) {
             captionsDiv.innerText += event.data;
+            captionsDiv.innerText += "\n";
         };
     </script>
 </body>

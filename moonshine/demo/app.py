@@ -73,8 +73,10 @@ def end_recording(speech, do_print=True):
     text = transcribe(speech)
     if do_print:
         print_captions(text)
-    transcription_queue.put(text)  # Add the new caption to the queue immediately.
+        
     caption_cache.append(text)
+    transcription_queue.put((" " * MAX_LINE_LENGTH) + text)  # Add the new caption to the queue immediately.
+
     speech *= 0.0
 
 

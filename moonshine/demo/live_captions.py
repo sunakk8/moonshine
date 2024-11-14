@@ -194,4 +194,3 @@ if __name__ == "__main__":
 """)
             if caption_cache:
                 print(f"Cached captions.\n{' '.join(caption_cache)}")
-
