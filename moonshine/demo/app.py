@@ -21,7 +21,7 @@ SAMPLING_RATE = 16000
 CHUNK_SIZE = 512  # Silero VAD requirement with sampling rate 16000.
 LOOKBACK_CHUNKS = 5
 MAX_LINE_LENGTH = 80
-MAX_SPEECH_SECS = 1
+MAX_SPEECH_SECS = 15
 MIN_REFRESH_SECS = 0.2
 
 # Flask app
@@ -74,8 +74,8 @@ def end_recording(speech, do_print=True):
     if do_print:
         print_captions(text)
         
+    #transcription_queue.put((" " * MAX_LINE_LENGTH) + text)  # Add the new caption to the queue immediately.
     caption_cache.append(text)
-    transcription_queue.put((" " * MAX_LINE_LENGTH) + text)  # Add the new caption to the queue immediately.
 
     speech *= 0.0
 
@@ -91,6 +91,7 @@ def print_captions(text):
         text = text[-MAX_LINE_LENGTH:]
     else:
         text = " " * (MAX_LINE_LENGTH - len(text)) + text
+    transcription_queue.put(text)  # Add the new caption to the queue immediately.
     print("\r" + (" " * MAX_LINE_LENGTH) + "\r" + text, end="", flush=True)
 
 
@@ -119,7 +120,7 @@ def stream():
 
 
 def run_flask():
-    app.run(debug=True, use_reloader=False)
+    app.run(debug=False, use_reloader=False)
 
 
 if __name__ == "__main__":

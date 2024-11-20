@@ -17,8 +17,7 @@
         const eventSource = new EventSource('/stream');
 
         eventSource.onmessage = function(event) {
-            captionsDiv.innerText += event.data;
-            captionsDiv.innerText += "\n";
+            captionsDiv.innerText = event.data;
         };
     </script>
 </body>
